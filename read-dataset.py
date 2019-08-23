@@ -4,6 +4,7 @@ from skimage.viewer.plugins.lineprofile import LineProfile
 import skimage.io as io
 import argparse
 import os
+import sys
 
 # initiate the parser
 parser = argparse.ArgumentParser(prog='read-au-detrac', usage='%(prog)s [options]', description='Shows each annotated image at au-detrac data set.')
@@ -28,6 +29,7 @@ def getFiles(files):
                     images.append(file.name)
 
 def getDirs(path):
+    annotations = 0
     with os.scandir(path) as entries:
         for entry in entries:
             if entry.is_dir(follow_symlinks=False):
@@ -35,20 +37,46 @@ def getDirs(path):
                 getFiles(files)
                 videos.append([entry.name + PATTERN_ANNOTATION,images.copy()])
                 images.clear()
-              
-            print(entry.name)    
+        annotations = len(videos)
+    return annotations                
+            
+class detracCollectionViewer(CollectionViewer):
+    def update_index(self, name, index):
+        """Select image on display using index into image collection."""
+        index = int(round(index))
 
-dataset_path = args.dataset
-getDirs(dataset_path)
+        if index == self.index:
+            return
 
-#your path 
-img_dir = './dataset/images/MVI_20011'
+        # clip index value to collection limits
+        index = max(index, 0)
+        index = min(index, self.num_images - 1)
 
-#creating a collection with the available images
-images = io.ImageCollection(img_dir + '/img*.jpg')
-#viewer = ImageViewer(images[0])
-viewer = CollectionViewer(images)
-viewer.show()
-#viewer += LineProfile(viewer)
-#overlay, data = viewer.show()[0]
+        self.index = index
+        self.slider.val = index
+        self.update_image(self.image_collection[index])
+        print(index)
 
+
+if __name__ == '__main__':
+    #app = QApplication(sys.argv)
+    #ex = Example()
+    
+
+    dataset_path = args.dataset
+    all_annotation_number = getDirs(dataset_path)
+    print(all_annotation_number)
+
+    #your path 
+    img_dir = './dataset/images/MVI_20011'
+
+    #creating a collection with the available images
+    images = io.ImageCollection(img_dir + '/img*.jpg')
+    #viewer = ImageViewer(images[0])
+    #viewer = CollectionViewer(images)
+    viewer = detracCollectionViewer(images)
+    viewer.update_index
+    #viewer.show()
+    viewer += LineProfile(viewer)
+    overlay, data = viewer.show()[0]
+    sys.exit(viewer.exec_())
