@@ -3,6 +3,10 @@ from skimage.viewer import ImageViewer, CollectionViewer
 from skimage.viewer.plugins.lineprofile import LineProfile
 from skimage.viewer.widgets import Slider
 from skimage.io.collection import alphanumeric_key
+from skimage.viewer.canvastools import RectangleTool
+from skimage.draw import line
+from skimage.draw import set_color
+
 import pandas as pd
 import numpy as np
 import skimage.io as io
@@ -53,23 +57,28 @@ def getDirs(path):
                
             
 class detracCollectionViewer(CollectionViewer):
-    def __init__(self, full_annotations, update_on='move', **kwargs):
-        #print(dataset_collection[0][0])
+    def __init__(self, full_annotations, update_on='move'):
         self.annotation_file_name = full_annotations[0][0]
         self.image_collection = io.ImageCollection(PATH_DATASET + '/' + self.annotation_file_name +  '/img*.jpg')
+        self.num_images = len(self.image_collection[0])
         self.index = 0
-        self.num_images = len(self.image_collection)
 
         first_image = self.image_collection[0]
         self.annotation_pointer = self.loadAnnotation(self.annotation_file_name)
+        #self.frame_annotation = self.getAnnotation(self.index + 1)
+        #print(boxes_coord.to_string(index=False))
+        #print(boxes_coord)
+        
         super(CollectionViewer, self).__init__(first_image)
+        #self.plotBoxes(self.frame_annotation)
 
         slider_kws = dict(value=0, low=0, high=self.num_images - 1)
         slider_kws['update_on'] = update_on
         slider_kws['callback'] = self.update_index
         slider_kws['value_type'] = 'int'
         self.slider = Slider('frame', **slider_kws)
-        self.layout.addWidget(self.slider)    
+        self.layout.addWidget(self.slider)
+
     def update_index(self, name, index):
         """Select image on display using index into image collection."""
         index = int(round(index))
@@ -84,15 +93,44 @@ class detracCollectionViewer(CollectionViewer):
         self.index = index
         self.slider.val = index
         self.update_image(self.image_collection[index])
-        print(index)
-        frame_annotation = self.getAnnotation(index)
+        self.frame_annotation = self.getAnnotation(index + 1)
+        self.plotBoxes(self.frame_annotation)
     
     def loadAnnotation(self, name):
         file_name = PATH_ANNOTATIONS + '/' + name + PATTERN_ANNOTATION
         return pd.read_table(file_name, delimiter=',', header=None, names=['Frame','Class','x1','y1','x2','y2','None'])
     
     def getAnnotation(self, idx):
-        return self.annotation_pointer[self.annotation_pointer['Frame'] == idx]
+        bboxes = (self.annotation_pointer[self.annotation_pointer['Frame'] == idx])[['x1','y1','x2','y2']]
+        #df[df['CLASS']==1]['CONTENT'] 
+        #a = self.annotation_pointer['x1','y1','x2','y2'] #[(self.annotation_pointer['Frame'] == idx)]
+        return bboxes
+    
+    def plotBoxes(self, bboxes):
+        for index, row in bboxes.iterrows():
+            '''(xmin, xmax, ymin, ymax)'''
+            xmin, xmax = sorted([row['x1'], row['x1'] + row['x2']])
+            ymin, ymax = sorted([row['y1'], row['y1']+ row['y2']])
+            
+            coord = (xmin, xmax, ymin, ymax)
+            self.plot_rect(coord)
+            
+    
+    def plot_rect(self, extents):
+        im = self.image
+        coord = np.int64(extents)
+        [rr1, cc1] = line(coord[2],coord[0],coord[2],coord[1])
+        [rr2, cc2] = line(coord[2],coord[1],coord[3],coord[1])
+        [rr3, cc3] = line(coord[3],coord[1],coord[3],coord[0])
+        [rr4, cc4] = line(coord[3],coord[0],coord[2],coord[0])
+        set_color(im, (rr1, cc1), [255, 255, 35])
+        set_color(im, (rr2, cc2), [255, 255, 35])
+        set_color(im, (rr3, cc3), [255, 255, 35])
+        set_color(im, (rr4, cc4), [255, 255, 35])
+        #viewer.image=im
+        self.update_image(im)
+        #print(extents) #x1
+        
 
         
 if __name__ == '__main__':
@@ -103,15 +141,16 @@ if __name__ == '__main__':
     print('Total of video annotations: {}'.format(total_annotation))
     print('Total of images in dataset: {}'.format(total_images))
     #your path 
-    img_dir = './dataset/images/MVI_20011' 
+    #img_dir = './dataset/images/MVI_20011' 
 
     #creating a collection with the available images
     #images = io.ImageCollection(img_dir + '/img*.jpg')
-    #viewer = ImageViewer(images[0])
+    #viewer = ImageViewer(images)
     #viewer = CollectionViewer(images)
     #viewer = detracCollectionViewer(images)
     viewer = detracCollectionViewer(full_annotations)
     viewer.update_index
+    rect_tool = RectangleTool(viewer, on_enter=viewer.plot_rect)
     viewer.show()
     #viewer += LineProfile(viewer)
     #overlay, data = viewer.show()[0]
