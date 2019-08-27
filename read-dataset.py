@@ -1,4 +1,7 @@
 # include standard modules
+import xml.etree.ElementTree as ET
+import xml_2_json as xml2json
+
 from skimage.viewer import ImageViewer, CollectionViewer
 from skimage.viewer.plugins.lineprofile import LineProfile
 from skimage.viewer.widgets import Slider
@@ -22,7 +25,7 @@ parser.add_argument('--version', action='version', version='%(prog)s 0.1')
 
 # read arguments from the command line
 args = parser.parse_args()
-PATTERN_ANNOTATION = '_Det_R-CNN.txt'
+SUFFIX_ANNOTATION = '_v3.xml'
 PATH_ANNOTATIONS = args.annotation
 PATH_DATASET = args.dataset
 
@@ -58,13 +61,13 @@ def getDirs(path):
             
 class detracCollectionViewer(CollectionViewer):
     def __init__(self, full_annotations, update_on='move'):
-        self.annotation_file_name = full_annotations[0][0]
+        self.annotation_file_name = full_annotations[0][0] # get file name
         self.image_collection = io.ImageCollection(PATH_DATASET + '/' + self.annotation_file_name +  '/img*.jpg')
         self.num_images = len(self.image_collection[0])
         self.index = 0
 
         first_image = self.image_collection[0]
-        self.annotation_pointer = self.loadAnnotation(self.annotation_file_name)
+        self.annotation_pointer = self.loadAnnotation(self.annotation_file_name + SUFFIX_ANNOTATION)
         #self.frame_annotation = self.getAnnotation(self.index + 1)
         #print(boxes_coord.to_string(index=False))
         #print(boxes_coord)
@@ -93,12 +96,14 @@ class detracCollectionViewer(CollectionViewer):
         self.index = index
         self.slider.val = index
         self.update_image(self.image_collection[index])
-        self.frame_annotation = self.getAnnotation(index + 1)
-        self.plotBoxes(self.frame_annotation)
+        #self.frame_annotation = self.getAnnotation(index + 1)
+        #self.plotBoxes(self.frame_annotation)
     
     def loadAnnotation(self, name):
-        file_name = PATH_ANNOTATIONS + '/' + name + PATTERN_ANNOTATION
-        return pd.read_table(file_name, delimiter=',', header=None, names=['Frame','Class','x1','y1','x2','y2','None'])
+        xml_data = PATH_ANNOTATIONS + '/' + name
+        xmlObj = xml2df.XML2DataFrame(xml_data)
+        xml_dataframe = xmlObj.process_data()
+        return xml_dataframe
     
     def getAnnotation(self, idx):
         bboxes = (self.annotation_pointer[self.annotation_pointer['Frame'] == idx])[['x1','y1','x2','y2']]
@@ -148,10 +153,15 @@ if __name__ == '__main__':
     #viewer = ImageViewer(images)
     #viewer = CollectionViewer(images)
     #viewer = detracCollectionViewer(images)
-    viewer = detracCollectionViewer(full_annotations)
-    viewer.update_index
-    rect_tool = RectangleTool(viewer, on_enter=viewer.plot_rect)
-    viewer.show()
+   # viewer = detracCollectionViewer(full_annotations)
+   # viewer.update_index
+   # rect_tool = RectangleTool(viewer, on_enter=viewer.plot_rect)
+   # viewer.show()
     #viewer += LineProfile(viewer)
     #overlay, data = viewer.show()[0]
-    sys.exit(viewer.exec_())
+   # sys.exit(viewer.exec_())
+    xml_data = 'dataset/annotations/MVI_20011_v3.xml'
+    xmlObj = xml2df.XML2DataFrame(xml_data)
+    xml_dataframe = xmlObj.process_data()
+    print(xml_dataframe.columns)
+
