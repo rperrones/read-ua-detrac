@@ -10,12 +10,11 @@ from skimage.viewer.canvastools import RectangleTool
 from skimage.draw import line
 from skimage.draw import set_color
 
-import pandas as pd
 import numpy as np
 import skimage.io as io
 import argparse
 import os
-import sys
+
 
 # initiate the parser
 parser = argparse.ArgumentParser(prog='read-au-detrac', usage='%(prog)s [options]', description='Shows each annotated image at au-detrac data set.')
@@ -41,17 +40,17 @@ def getFiles(files):
                 if f.endswith('.jpg'):
                     images.append(file.name)
 
-def getDirs(path):
+def getDirs(pathDataset):
     annotations = 0
     num_images = 0
-    with os.scandir(path) as entries:
+    with os.scandir(pathDataset) as entries:
         entries = sorted(entries, key=lambda e: e.name)
         for entry in entries:
             if entry.is_dir(follow_symlinks=False):
                 files = os.scandir(entry)
                 getFiles(files)
                 images_ordered = sorted(images, key=alphanumeric_key)
-                full_annotations.append([entry.name,images_ordered.copy(), len(images_ordered)])
+                full_annotations.append([entry.name + '.xml',images_ordered.copy(), len(images_ordered)])
                 num_images = num_images + len(images_ordered)
                 images.clear()
         annotations = len(full_annotations)
@@ -62,17 +61,17 @@ def getDirs(path):
 class detracCollectionViewer(CollectionViewer):
     def __init__(self, full_annotations, update_on='move'):
         self.filename = full_annotations[0][0] # get file name
-        self.image_collection = io.ImageCollection(PATH_DATASET + '/' + self.filename +  '/img*.jpg')
+        name, extension = self.filename.split(".")
+        self.image_collection = io.ImageCollection(PATH_DATASET + '/' + name +  '/img*.jpg')
         self.num_images = len(self.image_collection[0])
         self.index = 0
 
         first_image = self.image_collection[0]
-        self.annotation_pointer = self.loadAnnotation(self.filename)
-        #self.frame_annotation = self.getAnnotation(self.index + 1)
-        #print(boxes_coord.to_string(index=False))
-        #print(boxes_coord)
-        
         super(CollectionViewer, self).__init__(first_image)
+        #self.xmlObj = self._loadAnnotation(self.filename)
+        self.xmlObj = CollectionAnnotation(PATH_ANNOTATIONS + '/' + self.filename)
+        self._plotAnnotation(self.index + 1)
+
 
         slider_kws = dict(value=0, low=0, high=self.num_images - 1)
         slider_kws['update_on'] = update_on
@@ -95,34 +94,48 @@ class detracCollectionViewer(CollectionViewer):
         self.index = index
         self.slider.val = index
         self.update_image(self.image_collection[index])
-        #self.frame_annotation = self.getAnnotation(index + 1)
-        #self.plotBoxes(self.frame_annotation)
+        self._plotAnnotation(index + 1)
+        
     
-    def loadAnnotation(self, fname):
-        xml_data = PATH_ANNOTATIONS + '/' + fname
-        xmlObj = xml2df.XML2DataFrame(xml_data)
-        xml_dataframe = xmlObj.process_data()
-        return xml_dataframe
+    def _plotAnnotation(self, idx):
+        boxes = self.xmlObj.getBBoxes(idx)
+        if len(boxes) > 0:
+            self._bboxes = []
+            for b in boxes:
+                frame_id = b[0]
+                box_id = b[1]
+                car_type = b[2]
+                car_color = b[3]
+                x1 = b[4]['left']
+                y1 = b[4]['top']
+                x2 = b[4]['width']
+                y2 = b[4]['height']
     
-    def getAnnotation(self, idx):
-        bboxes = (self.annotation_pointer[self.annotation_pointer['Frame'] == idx])[['x1','y1','x2','y2']]
-        #df[df['CLASS']==1]['CONTENT'] 
-        #a = self.annotation_pointer['x1','y1','x2','y2'] #[(self.annotation_pointer['Frame'] == idx)]
-        return bboxes
+                xmin, xmax = sorted([x1, x1 + x2])
+                ymin, ymax = sorted([y1, y1 + y2])
+                coord = (xmin, xmax, ymin, ymax)
+                self._bboxes.append([frame_id, box_id, car_type, car_color, [x1,y1,x2,y2]])
+                self.plot_rect(coord)
+                
     
-    def plotBoxes(self, bboxes):
-        for index, row in bboxes.iterrows():
-            '''(xmin, xmax, ymin, ymax)'''
-            xmin, xmax = sorted([row['x1'], row['x1'] + row['x2']])
-            ymin, ymax = sorted([row['y1'], row['y1']+ row['y2']])
-            
-            coord = (xmin, xmax, ymin, ymax)
-            self.plot_rect(coord)
-            
+
+# =============================================================================
+#     def plotBoxes(self, bboxes):
+#         for index, row in bboxes.iterrows():
+#             '''(xmin, xmax, ymin, ymax)'''
+#             xmin, xmax = sorted([row['x1'], row['x1'] + row['x2']])
+#             ymin, ymax = sorted([row['y1'], row['y1']+ row['y2']])
+#             
+#             coord = (xmin, xmax, ymin, ymax)
+#             self.plot_rect(coord)
+#             
+# =============================================================================
     
     def plot_rect(self, extents):
         im = self.image
+        print(extents)
         coord = np.int64(extents)
+        
         [rr1, cc1] = line(coord[2],coord[0],coord[2],coord[1])
         [rr2, cc2] = line(coord[2],coord[1],coord[3],coord[1])
         [rr3, cc3] = line(coord[3],coord[1],coord[3],coord[0])
@@ -154,14 +167,17 @@ if __name__ == '__main__':
     #viewer = CollectionViewer(images)
     #viewer = detracCollectionViewer(images)
     viewer = detracCollectionViewer(full_annotations)
-   # viewer.update_index
+    viewer.update_index
     rect_tool = RectangleTool(viewer, on_enter=viewer.plot_rect)
     viewer.show()
+    print(rect_tool._extents_on_press)
     #viewer += LineProfile(viewer)
     #overlay, data = viewer.show()[0]
    # sys.exit(viewer.exec_())
     #xml_data = 'dataset/annotations/MVI_20011.xml'
     #xmlObj = CollectionAnnotation(xml_data)
     #bboxes = xmlObj.getBBoxes(1)
+    #print(bboxes[0][4]['height'])
     #print(bboxes)
+    
 

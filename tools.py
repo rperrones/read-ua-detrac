@@ -56,9 +56,13 @@ class CollectionAnnotation:
                    id = int(targets.get('id'))
                    car_attrib = targets[1].attrib
                    for e in targets.iter('box'):
-                       #print(e.attrib)
-                       bboxes.append([frame_idx, id, car_attrib['vehicle_type'], car_attrib['color'], e.attrib])
-               
+                       height_value = float(e.attrib['height'])
+                       #print(type(int(float(height_value))))
+                       left_value = float(e.attrib['left'])
+                       top_value = float(e.attrib['top'])
+                       width_value  = float(e.attrib['width'])
+                       bboxes.append([frame_idx, id, car_attrib['vehicle_type'], car_attrib['color'], {'height': height_value, 'left': left_value, 'top': top_value, 'width': width_value}])
+
         return bboxes
     
 if __name__ == '__main__':
@@ -75,5 +79,7 @@ if __name__ == '__main__':
 # =============================================================================
     jsonObj = CollectionAnnotation(args.annotation)
     a = jsonObj.getBBoxes(1)
+    #print(a[0][4]['height'])
+    #print(a)
     
     
