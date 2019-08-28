@@ -1,6 +1,6 @@
 # include standard modules
 import xml.etree.ElementTree as ET
-import xml_2_json as xml2json
+from tools import CollectionAnnotation
 
 from skimage.viewer import ImageViewer, CollectionViewer
 from skimage.viewer.plugins.lineprofile import LineProfile
@@ -61,19 +61,18 @@ def getDirs(path):
             
 class detracCollectionViewer(CollectionViewer):
     def __init__(self, full_annotations, update_on='move'):
-        self.annotation_file_name = full_annotations[0][0] # get file name
-        self.image_collection = io.ImageCollection(PATH_DATASET + '/' + self.annotation_file_name +  '/img*.jpg')
+        self.filename = full_annotations[0][0] # get file name
+        self.image_collection = io.ImageCollection(PATH_DATASET + '/' + self.filename +  '/img*.jpg')
         self.num_images = len(self.image_collection[0])
         self.index = 0
 
         first_image = self.image_collection[0]
-        self.annotation_pointer = self.loadAnnotation(self.annotation_file_name + SUFFIX_ANNOTATION)
+        self.annotation_pointer = self.loadAnnotation(self.filename)
         #self.frame_annotation = self.getAnnotation(self.index + 1)
         #print(boxes_coord.to_string(index=False))
         #print(boxes_coord)
         
         super(CollectionViewer, self).__init__(first_image)
-        #self.plotBoxes(self.frame_annotation)
 
         slider_kws = dict(value=0, low=0, high=self.num_images - 1)
         slider_kws['update_on'] = update_on
@@ -99,8 +98,8 @@ class detracCollectionViewer(CollectionViewer):
         #self.frame_annotation = self.getAnnotation(index + 1)
         #self.plotBoxes(self.frame_annotation)
     
-    def loadAnnotation(self, name):
-        xml_data = PATH_ANNOTATIONS + '/' + name
+    def loadAnnotation(self, fname):
+        xml_data = PATH_ANNOTATIONS + '/' + fname
         xmlObj = xml2df.XML2DataFrame(xml_data)
         xml_dataframe = xmlObj.process_data()
         return xml_dataframe
@@ -136,7 +135,8 @@ class detracCollectionViewer(CollectionViewer):
         self.update_image(im)
         #print(extents) #x1
         
-
+    def plotBBoxes(self,coord):
+        return 0
         
 if __name__ == '__main__':
     #app = QApplication(sys.argv)
@@ -153,15 +153,15 @@ if __name__ == '__main__':
     #viewer = ImageViewer(images)
     #viewer = CollectionViewer(images)
     #viewer = detracCollectionViewer(images)
-   # viewer = detracCollectionViewer(full_annotations)
+    viewer = detracCollectionViewer(full_annotations)
    # viewer.update_index
-   # rect_tool = RectangleTool(viewer, on_enter=viewer.plot_rect)
-   # viewer.show()
+    rect_tool = RectangleTool(viewer, on_enter=viewer.plot_rect)
+    viewer.show()
     #viewer += LineProfile(viewer)
     #overlay, data = viewer.show()[0]
    # sys.exit(viewer.exec_())
-    xml_data = 'dataset/annotations/MVI_20011_v3.xml'
-    xmlObj = xml2df.XML2DataFrame(xml_data)
-    xml_dataframe = xmlObj.process_data()
-    print(xml_dataframe.columns)
+    #xml_data = 'dataset/annotations/MVI_20011.xml'
+    #xmlObj = CollectionAnnotation(xml_data)
+    #bboxes = xmlObj.getBBoxes(1)
+    #print(bboxes)
 
