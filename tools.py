@@ -11,6 +11,49 @@ import xml.etree.ElementTree as ET
 import os
 import argparse
 import re
+from skimage.viewer.widgets import Text
+from skimage.viewer.qt import QtWidgets, QtCore
+
+class bboxBar(Text):
+    def __init__(self, name=None, text=''):
+        super(Text, self).__init__(name)
+        self._label = QtWidgets.QLabel('X')
+        #self.text = '0.0'
+        self.layout = QtWidgets.QHBoxLayout(self)
+        self.layout.addWidget(self._label)
+
+        _labelx1_value = QtWidgets.QLabel()
+        _labelx1_value.setText('0.0')
+        self.layout.addWidget(_labelx1_value)
+        
+        
+        _labely1 = QtWidgets.QLabel()
+        _labely1.setText('Y')
+        self.layout.addWidget(_labely1)
+        
+        _labely1_value = QtWidgets.QLabel()
+        _labely1_value.setText('0.0')
+        self.layout.addWidget(_labely1_value)
+
+        _labelw = QtWidgets.QLabel()
+        _labelw.setText('width')
+        self.layout.addWidget(_labelw)
+        
+        _labelw_value = QtWidgets.QLabel()
+        _labelw_value.setText('0.0')
+        self.layout.addWidget(_labelw_value)        
+        
+        _labelh = QtWidgets.QLabel()
+        _labelh.setText('H')
+        self.layout.addWidget(_labelh)        
+
+        _labelh_value = QtWidgets.QLabel()
+        _labelh_value.setText('0.0')
+        self.layout.addWidget(_labelh_value)        
+        
+
+        self.layout.setAlignment(QtCore.Qt.AlignLeft)
+
 
 class CollectionAnnotation:
     
@@ -81,5 +124,7 @@ if __name__ == '__main__':
     a = jsonObj.getBBoxes(1)
     #print(a[0][4]['height'])
     #print(a)
+    
+    
     
     

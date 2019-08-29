@@ -1,6 +1,6 @@
 # include standard modules
 import xml.etree.ElementTree as ET
-from tools import CollectionAnnotation
+from tools import CollectionAnnotation, bboxBar
 
 from skimage.viewer import ImageViewer, CollectionViewer
 from skimage.viewer.plugins.lineprofile import LineProfile
@@ -9,6 +9,7 @@ from skimage.io.collection import alphanumeric_key
 from skimage.viewer.canvastools import RectangleTool
 from skimage.draw import line
 from skimage.draw import set_color
+
 
 import numpy as np
 import skimage.io as io
@@ -51,10 +52,13 @@ def getDirs(pathDataset):
                 getFiles(files)
                 images_ordered = sorted(images, key=alphanumeric_key)
                 full_annotations.append([entry.name + '.xml',images_ordered.copy(), len(images_ordered)])
+                print(entry.name, len(images_ordered))
                 num_images = num_images + len(images_ordered)
                 images.clear()
         annotations = len(full_annotations)
     return annotations, num_images
+
+
 
                
             
@@ -63,7 +67,7 @@ class detracCollectionViewer(CollectionViewer):
         self.filename = full_annotations[0][0] # get file name
         name, extension = self.filename.split(".")
         self.image_collection = io.ImageCollection(PATH_DATASET + '/' + name +  '/img*.jpg')
-        self.num_images = len(self.image_collection[0])
+        self.num_images = len(self.image_collection)
         self.index = 0
 
         first_image = self.image_collection[0]
@@ -72,35 +76,39 @@ class detracCollectionViewer(CollectionViewer):
         self.xmlObj = CollectionAnnotation(PATH_ANNOTATIONS + '/' + self.filename)
         self._plotAnnotation(self.index + 1)
 
-
-        slider_kws = dict(value=0, low=0, high=self.num_images - 1)
+        slider_kws = dict(value=1, low=1, high=self.num_images)
         slider_kws['update_on'] = update_on
         slider_kws['callback'] = self.update_index
         slider_kws['value_type'] = 'int'
         self.slider = Slider('frame', **slider_kws)
         self.layout.addWidget(self.slider)
 
+        self.box_coord = bboxBar()
+        self.layout.addWidget(self.box_coord)
+        
+
+
     def update_index(self, name, index):
         """Select image on display using index into image collection."""
-        index = int(round(index))
-
         if index == self.index:
             return
 
         # clip index value to collection limits
-        index = max(index, 0)
-        index = min(index, self.num_images - 1)
+        index = max(index, 1)
+        index = min(index, self.num_images)
 
         self.index = index
         self.slider.val = index
-        self.update_image(self.image_collection[index])
-        self._plotAnnotation(index + 1)
-        
+        self.update_image(self.image_collection[index -1])
+        self._plotAnnotation(index)
+       
+
     
     def _plotAnnotation(self, idx):
         boxes = self.xmlObj.getBBoxes(idx)
         if len(boxes) > 0:
             self._bboxes = []
+            self.box = []
             for b in boxes:
                 frame_id = b[0]
                 box_id = b[1]
@@ -111,25 +119,13 @@ class detracCollectionViewer(CollectionViewer):
                 x2 = b[4]['width']
                 y2 = b[4]['height']
     
+                self.box = (x1, y1, x2, y2)
                 xmin, xmax = sorted([x1, x1 + x2])
                 ymin, ymax = sorted([y1, y1 + y2])
                 coord = (xmin, xmax, ymin, ymax)
                 self._bboxes.append([frame_id, box_id, car_type, car_color, [x1,y1,x2,y2]])
                 self.plot_rect(coord)
                 
-    
-
-# =============================================================================
-#     def plotBoxes(self, bboxes):
-#         for index, row in bboxes.iterrows():
-#             '''(xmin, xmax, ymin, ymax)'''
-#             xmin, xmax = sorted([row['x1'], row['x1'] + row['x2']])
-#             ymin, ymax = sorted([row['y1'], row['y1']+ row['y2']])
-#             
-#             coord = (xmin, xmax, ymin, ymax)
-#             self.plot_rect(coord)
-#             
-# =============================================================================
     
     def plot_rect(self, extents):
         im = self.image
