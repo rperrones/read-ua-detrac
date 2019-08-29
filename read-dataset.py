@@ -28,6 +28,9 @@ args = parser.parse_args()
 SUFFIX_ANNOTATION = '_v3.xml'
 PATH_ANNOTATIONS = args.annotation
 PATH_DATASET = args.dataset
+YELLOW_COLOR = [255, 255, 35]
+RED_COLOR    = [255, 0, 17]
+
 
 # check for --version or -V
 #if args.version:
@@ -52,7 +55,7 @@ def getDirs(pathDataset):
                 getFiles(files)
                 images_ordered = sorted(images, key=alphanumeric_key)
                 full_annotations.append([entry.name + '.xml',images_ordered.copy(), len(images_ordered)])
-                print(entry.name, len(images_ordered))
+                #print(entry.name, len(images_ordered))
                 num_images = num_images + len(images_ordered)
                 images.clear()
         annotations = len(full_annotations)
@@ -64,7 +67,7 @@ def getDirs(pathDataset):
             
 class detracCollectionViewer(CollectionViewer):
     def __init__(self, full_annotations, update_on='move'):
-        self.filename = full_annotations[0][0] # get file name
+        self.filename = full_annotations[20][0] # get file name
         name, extension = self.filename.split(".")
         self.image_collection = io.ImageCollection(PATH_DATASET + '/' + name +  '/img*.jpg')
         self.num_images = len(self.image_collection)
@@ -74,7 +77,10 @@ class detracCollectionViewer(CollectionViewer):
         super(CollectionViewer, self).__init__(first_image)
         #self.xmlObj = self._loadAnnotation(self.filename)
         self.xmlObj = CollectionAnnotation(PATH_ANNOTATIONS + '/' + self.filename)
+        print(self.filename)
         self._plotAnnotation(self.index + 1)
+        self.loadIgnoredRegions()
+        self._plotIgnoredRegions()
 
         slider_kws = dict(value=1, low=1, high=self.num_images)
         slider_kws['update_on'] = update_on
@@ -101,6 +107,7 @@ class detracCollectionViewer(CollectionViewer):
         self.slider.val = index
         self.update_image(self.image_collection[index -1])
         self._plotAnnotation(index)
+        self._plotIgnoredRegions()
        
 
     
@@ -125,21 +132,44 @@ class detracCollectionViewer(CollectionViewer):
                 coord = (xmin, xmax, ymin, ymax)
                 self._bboxes.append([frame_id, box_id, car_type, car_color, [x1,y1,x2,y2]])
                 self.plot_rect(coord)
-                
     
-    def plot_rect(self, extents):
+    def loadIgnoredRegions(self):
+        ig = self.xmlObj.getIgnoredRegion()
+        if len(ig) > 0:
+            self._ignoredRegions = []
+            self.box = []
+            for b in ig:
+                x1 = b['left']
+                y1 = b['top']
+                x2 = b['width']
+                y2 = b['height']
+    
+                self.box = (x1, y1, x2, y2)
+                xmin, xmax = sorted([x1, x1 + x2])
+                ymin, ymax = sorted([y1, y1 + y2])
+                coord = (xmin, xmax, ymin, ymax)
+                self._ignoredRegions.append([x1,y1,x2,y2])
+                self.plot_rect(coord)        
+        
+    def _plotIgnoredRegions(self):
+        for each in self._ignoredRegions:
+            xmin, xmax = sorted([each[0], each[0] + each[2]])
+            ymin, ymax = sorted([each[1], each[1] + each[3]])
+            coord = (xmin, xmax, ymin, ymax)
+            self.plot_rect(coord, RED_COLOR)
+    
+    def plot_rect(self, extents, color=YELLOW_COLOR):
         im = self.image
-        print(extents)
         coord = np.int64(extents)
         
         [rr1, cc1] = line(coord[2],coord[0],coord[2],coord[1])
         [rr2, cc2] = line(coord[2],coord[1],coord[3],coord[1])
         [rr3, cc3] = line(coord[3],coord[1],coord[3],coord[0])
         [rr4, cc4] = line(coord[3],coord[0],coord[2],coord[0])
-        set_color(im, (rr1, cc1), [255, 255, 35])
-        set_color(im, (rr2, cc2), [255, 255, 35])
-        set_color(im, (rr3, cc3), [255, 255, 35])
-        set_color(im, (rr4, cc4), [255, 255, 35])
+        set_color(im, (rr1, cc1), color)
+        set_color(im, (rr2, cc2), color)
+        set_color(im, (rr3, cc3), color)
+        set_color(im, (rr4, cc4), color)
         #viewer.image=im
         self.update_image(im)
         #print(extents) #x1
@@ -166,7 +196,7 @@ if __name__ == '__main__':
     viewer.update_index
     rect_tool = RectangleTool(viewer, on_enter=viewer.plot_rect)
     viewer.show()
-    print(rect_tool._extents_on_press)
+    #print(rect_tool._extents_on_press)
     #viewer += LineProfile(viewer)
     #overlay, data = viewer.show()[0]
    # sys.exit(viewer.exec_())

@@ -108,6 +108,19 @@ class CollectionAnnotation:
 
         return bboxes
     
+    def getIgnoredRegion(self):
+        ignoredRegions = []
+        for igs in self.root.iter('ignored_region'):
+            for e in igs.iter('box'):
+                height_value = float(e.attrib['height'])
+                left_value = float(e.attrib['left'])
+                top_value = float(e.attrib['top'])
+                width_value  = float(e.attrib['width'])
+                ignoredRegions.append({'height': height_value, 'left': left_value, 'top': top_value, 'width': width_value})
+
+        return ignoredRegions
+        
+    
 if __name__ == '__main__':
 
     # initiate the parser
@@ -121,9 +134,10 @@ if __name__ == '__main__':
 #          doc = xmltodict.parse(fd.read())
 # =============================================================================
     jsonObj = CollectionAnnotation(args.annotation)
-    a = jsonObj.getBBoxes(1)
+    #a = jsonObj.getBBoxes(1)
+    a = jsonObj.getIgnoredRegion()
     #print(a[0][4]['height'])
-    #print(a)
+    print(a[0]['height'])
     
     
     
