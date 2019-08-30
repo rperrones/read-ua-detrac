@@ -58,6 +58,7 @@ class bboxBar(Text):
 class CollectionAnnotation:
     
     def __init__(self, path):
+        self.path = path
         dirs, filename = os.path.split(path)
         name, extension = filename.split(".")
         self.json_file = name + '.json'
@@ -86,8 +87,8 @@ class CollectionAnnotation:
         dirs, filename = os.path.split(path)
         name, extension = filename.split(".")
         if filename.endswith(".xml"):
-            tree = ET.parse(path)
-            self.root = tree.getroot()
+            self.tree = ET.parse(path)
+            self.root = self.tree.getroot()
 
     def getBBoxes(self, i):
         bboxes = []
@@ -119,7 +120,47 @@ class CollectionAnnotation:
                 ignoredRegions.append({'height': height_value, 'left': left_value, 'top': top_value, 'width': width_value})
 
         return ignoredRegions
+    
+    def saveNewBBox(self, frm_id):
+        for frames in self.root.iter('frame'):
+           frame_idx = int(frames.get('num'))
+           if (frame_idx == 1):
+                  obj_target_parent = frames.find('./target_list/target/...')
+                  
+                  target = ET.SubElement(obj_target_parent, 'target')
+                  target_id = len(obj_target_parent)
+                  target.attrib["id"] = '{}'.format(target_id)
+                  target.text = "\n\t" #break down line
+                  
+                  obj_target_inserted = frames.find('./target_list/target[@id="{}"]'.format(target_id))
         
+        
+                  box = ET.SubElement(obj_target_inserted, 'box')
+        
+                  box.attrib["height"] = '{}'.format('0.0')
+                  box.attrib["left"] = '{}'.format('0.0')
+                  box.attrib["top"] = '{}'.format('0.0')
+                  box.attrib["width"] = '{}'.format('0.0')
+                  #box.text = "\n\t" #break down line
+                  box.tail = "\n\t"
+                  
+                  attribute = ET.SubElement(obj_target_inserted, 'attribute')
+                  attribute.attrib["color"] = '{}'.format("Silver")
+                  attribute.attrib["orientation"] = '{}'.format("0.0")
+                  attribute.attrib["speed"] = '{}'.format("0.0")
+                  attribute.attrib["trajectory_length"] = '{}'.format("0.0")
+                  attribute.attrib["truncation_ratio"] = '{}'.format("0.0")
+                  attribute.attrib["vehicle_type"] = '{}'.format("0.0")
+                  attribute.tail = "\n\t"
+        
+                  
+                  frames.attrib["density"] = '{}'.format(len(obj_target_parent))
+                  
+                  #print(ET.tostring(self.root, encoding='utf8').decode('utf8'))
+                  self.__saveXML()
+                  
+    def __saveXML(self):
+        self.tree.write('output.xml')
     
 if __name__ == '__main__':
 
@@ -136,8 +177,11 @@ if __name__ == '__main__':
     jsonObj = CollectionAnnotation(args.annotation)
     #a = jsonObj.getBBoxes(1)
     a = jsonObj.getIgnoredRegion()
+    jsonObj.saveNewBBox(1)
+
     #print(a[0][4]['height'])
-    print(a[0]['height'])
+    #print(a[0]['height'])
+    
     
     
     

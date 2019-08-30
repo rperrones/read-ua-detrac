@@ -195,6 +195,7 @@ if __name__ == '__main__':
     viewer = detracCollectionViewer(full_annotations)
     viewer.update_index
     rect_tool = RectangleTool(viewer, on_enter=viewer.plot_rect)
+    print(rect_tool.geometry)
     viewer.show()
     #print(rect_tool._extents_on_press)
     #viewer += LineProfile(viewer)

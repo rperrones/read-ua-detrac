@@ -20,19 +20,21 @@ for frames in xmlRoot.iter('frame'):
           obj_target_parent = frames.find('./target_list/target/...')
           
           target = ET.SubElement(obj_target_parent, 'target')
-          target.tail = "\n\t"
           target_id = len(obj_target_parent)
           target.attrib["id"] = '{}'.format(target_id)
-          target.tail = "\n\t"
-                    
+          target.text = "\n\t" #break down line
+          
           obj_target_inserted = frames.find('./target_list/target[@id="{}"]'.format(target_id))
 
-          
+
           box = ET.SubElement(obj_target_inserted, 'box')
+
           box.attrib["height"] = '{}'.format('0.0')
           box.attrib["left"] = '{}'.format('0.0')
           box.attrib["top"] = '{}'.format('0.0')
           box.attrib["width"] = '{}'.format('0.0')
+          #box.text = "\n\t" #break down line
+          box.tail = "\n\t"
           
           attribute = ET.SubElement(obj_target_inserted, 'attribute')
           attribute.attrib["color"] = '{}'.format("Silver")
@@ -41,6 +43,8 @@ for frames in xmlRoot.iter('frame'):
           attribute.attrib["trajectory_length"] = '{}'.format("0.0")
           attribute.attrib["truncation_ratio"] = '{}'.format("0.0")
           attribute.attrib["vehicle_type"] = '{}'.format("0.0")
+          attribute.tail = "\n\t"
+
           
           frames.attrib["density"] = '{}'.format(len(obj_target_parent))
 # =============================================================================
