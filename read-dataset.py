@@ -1,6 +1,6 @@
 # include standard modules
 import xml.etree.ElementTree as ET
-from tools import CollectionAnnotation, bboxBar
+from tools import CollectionAnnotation, bboxBar, rectangle
 
 from skimage.viewer import ImageViewer, CollectionViewer
 from skimage.viewer.plugins.lineprofile import LineProfile
@@ -67,7 +67,7 @@ def getDirs(pathDataset):
             
 class detracCollectionViewer(CollectionViewer):
     def __init__(self, full_annotations, update_on='move'):
-        self.filename = full_annotations[20][0] # get file name
+        self.filename = full_annotations[0][0] # get file name
         name, extension = self.filename.split(".")
         self.image_collection = io.ImageCollection(PATH_DATASET + '/' + name +  '/img*.jpg')
         self.num_images = len(self.image_collection)
@@ -75,14 +75,13 @@ class detracCollectionViewer(CollectionViewer):
 
         first_image = self.image_collection[0]
         super(CollectionViewer, self).__init__(first_image)
-        #self.xmlObj = self._loadAnnotation(self.filename)
         self.xmlObj = CollectionAnnotation(PATH_ANNOTATIONS + '/' + self.filename)
-        print(self.filename)
-        self._plotAnnotation(self.index + 1)
-        self.loadIgnoredRegions()
-        self._plotIgnoredRegions()
 
-        slider_kws = dict(value=1, low=1, high=self.num_images)
+        self._plotAnnotation(self.index + 1)
+        #self.loadIgnoredRegions()
+        #self._plotIgnoredRegions()
+
+        slider_kws = dict(value=0, low=0, high=self.num_images - 1)
         slider_kws['update_on'] = update_on
         slider_kws['callback'] = self.update_index
         slider_kws['value_type'] = 'int'
@@ -100,14 +99,14 @@ class detracCollectionViewer(CollectionViewer):
             return
 
         # clip index value to collection limits
-        index = max(index, 1)
-        index = min(index, self.num_images)
+        index = max(index, 0)
+        index = min(index, self.num_images -1)
 
         self.index = index
         self.slider.val = index
-        self.update_image(self.image_collection[index -1])
-        self._plotAnnotation(index)
-        self._plotIgnoredRegions()
+        self.update_image(self.image_collection[index])
+        self._plotAnnotation(index + 1)
+        #self._plotIgnoredRegions()
        
 
     
@@ -133,32 +132,34 @@ class detracCollectionViewer(CollectionViewer):
                 self._bboxes.append([frame_id, box_id, car_type, car_color, [x1,y1,x2,y2]])
                 self.plot_rect(coord)
     
-    def loadIgnoredRegions(self):
-        ig = self.xmlObj.getIgnoredRegion()
-        if len(ig) > 0:
-            self._ignoredRegions = []
-            self.box = []
-            for b in ig:
-                x1 = b['left']
-                y1 = b['top']
-                x2 = b['width']
-                y2 = b['height']
+# =============================================================================
+#     def loadIgnoredRegions(self):
+#         ig = self.xmlObj.getIgnoredRegion()
+#         if len(ig) > 0:
+#             self._ignoredRegions = []
+#             self.box = []
+#             for b in ig:
+#                 x1 = b['left']
+#                 y1 = b['top']
+#                 x2 = b['width']
+#                 y2 = b['height']
+#     
+#                 self.box = (x1, y1, x2, y2)
+#                 xmin, xmax = sorted([x1, x1 + x2])
+#                 ymin, ymax = sorted([y1, y1 + y2])
+#                 coord = (xmin, xmax, ymin, ymax)
+#                 self._ignoredRegions.append([x1,y1,x2,y2])
+#                 self.plot_rect(coord)        
+#         
+#     def _plotIgnoredRegions(self):
+#         for each in self._ignoredRegions:
+#             xmin, xmax = sorted([each[0], each[0] + each[2]])
+#             ymin, ymax = sorted([each[1], each[1] + each[3]])
+#             coord = (xmin, xmax, ymin, ymax)
+#             self.plot_rect(coord, RED_COLOR)
+# =============================================================================
     
-                self.box = (x1, y1, x2, y2)
-                xmin, xmax = sorted([x1, x1 + x2])
-                ymin, ymax = sorted([y1, y1 + y2])
-                coord = (xmin, xmax, ymin, ymax)
-                self._ignoredRegions.append([x1,y1,x2,y2])
-                self.plot_rect(coord)        
-        
-    def _plotIgnoredRegions(self):
-        for each in self._ignoredRegions:
-            xmin, xmax = sorted([each[0], each[0] + each[2]])
-            ymin, ymax = sorted([each[1], each[1] + each[3]])
-            coord = (xmin, xmax, ymin, ymax)
-            self.plot_rect(coord, RED_COLOR)
-    
-    def plot_rect(self, extents, color=YELLOW_COLOR):
+    def plot_rect(self, extents, color=YELLOW_COLOR, newBox=False):
         im = self.image
         coord = np.int64(extents)
         
@@ -172,10 +173,9 @@ class detracCollectionViewer(CollectionViewer):
         set_color(im, (rr4, cc4), color)
         #viewer.image=im
         self.update_image(im)
-        #print(extents) #x1
+        if newBox:
+            self.xmlObj.saveNewBBox(self.index + 1, coord)
         
-    def plotBBoxes(self,coord):
-        return 0
         
 if __name__ == '__main__':
     #app = QApplication(sys.argv)
@@ -194,8 +194,8 @@ if __name__ == '__main__':
     #viewer = detracCollectionViewer(images)
     viewer = detracCollectionViewer(full_annotations)
     viewer.update_index
-    rect_tool = RectangleTool(viewer, on_enter=viewer.plot_rect)
-    print(rect_tool.geometry)
+    rect_tool = rectangle(viewer, on_enter=viewer.plot_rect)
+
     viewer.show()
     #print(rect_tool._extents_on_press)
     #viewer += LineProfile(viewer)

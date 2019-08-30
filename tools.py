@@ -13,6 +13,16 @@ import argparse
 import re
 from skimage.viewer.widgets import Text
 from skimage.viewer.qt import QtWidgets, QtCore
+from skimage.viewer.canvastools import RectangleTool
+
+class rectangle(RectangleTool):
+    def on_key_press(self, event):
+        if event.key == 'enter':
+            self.callback_on_enter(self.geometry, newBox=True)
+            self.set_visible(False)
+            self.manager.redraw()
+            print('coordenadas: ', type(self._extents_on_press))
+
 
 class bboxBar(Text):
     def __init__(self, name=None, text=''):
@@ -121,52 +131,54 @@ class CollectionAnnotation:
 
         return ignoredRegions
     
-    def saveNewBBox(self, frm_id):
-        for frames in self.root.iter('frame'):
-           frame_idx = int(frames.get('num'))
-           if (frame_idx == 1):
-                  obj_target_parent = frames.find('./target_list/target/...')
-                  
-                  target = ET.SubElement(obj_target_parent, 'target')
-                  target_id = len(obj_target_parent)
-                  target.attrib["id"] = '{}'.format(target_id)
-                  target.text = "\n\t" #break down line
-                  
-                  obj_target_inserted = frames.find('./target_list/target[@id="{}"]'.format(target_id))
+    def saveNewBBox(self, frm_id, bbox):
+        '''  (x1, x2, y1, y2) = bbox '''
+        obj_target_parent = self.root.find('./frame[@num="{}"]/target_list/target/...'.format(frm_id))
+        print(type(obj_target_parent))
+        print(len(obj_target_parent))
+        target = ET.SubElement(obj_target_parent, 'target')
+        target_id = len(obj_target_parent)
+        target.attrib["id"] = '{}'.format(target_id)
+        target.text = "\n\t" #break down line
+        print(len(obj_target_parent))
         
-        
-                  box = ET.SubElement(obj_target_inserted, 'box')
-        
-                  box.attrib["height"] = '{}'.format('0.0')
-                  box.attrib["left"] = '{}'.format('0.0')
-                  box.attrib["top"] = '{}'.format('0.0')
-                  box.attrib["width"] = '{}'.format('0.0')
-                  #box.text = "\n\t" #break down line
-                  box.tail = "\n\t"
-                  
-                  attribute = ET.SubElement(obj_target_inserted, 'attribute')
-                  attribute.attrib["color"] = '{}'.format("Silver")
-                  attribute.attrib["orientation"] = '{}'.format("0.0")
-                  attribute.attrib["speed"] = '{}'.format("0.0")
-                  attribute.attrib["trajectory_length"] = '{}'.format("0.0")
-                  attribute.attrib["truncation_ratio"] = '{}'.format("0.0")
-                  attribute.attrib["vehicle_type"] = '{}'.format("0.0")
-                  attribute.tail = "\n\t"
-        
-                  
-                  frames.attrib["density"] = '{}'.format(len(obj_target_parent))
-                  
-                  #print(ET.tostring(self.root, encoding='utf8').decode('utf8'))
-                  self.__saveXML()
+        obj_target_inserted = self.root.find('./frame[@num="{}"]/target_list/target[@id="{}"]'.format(frm_id,target_id))
+        print(type(obj_target_inserted))
+
+        box = ET.SubElement(obj_target_inserted, 'box')
+
+        box.attrib["height"] = '{}'.format(bbox[3] - bbox[2])
+        box.attrib["left"] = '{}'.format(bbox[0])
+        box.attrib["top"] = '{}'.format(bbox[2])
+        box.attrib["width"] = '{}'.format(bbox[1] - bbox[0])
+        #box.text = "\n\t" #break down line
+        box.tail = "\n\t"
+      
+        attribute = ET.SubElement(obj_target_inserted, 'attribute')
+        attribute.attrib["color"] = '{}'.format("Silver")
+        attribute.attrib["orientation"] = '{}'.format("0.0")
+        attribute.attrib["speed"] = '{}'.format("0.0")
+        attribute.attrib["trajectory_length"] = '{}'.format("0.0")
+        attribute.attrib["truncation_ratio"] = '{}'.format("0.0")
+        attribute.attrib["vehicle_type"] = '{}'.format("0.0")
+        attribute.tail = "\n\t"
+
+      
+        obj_target_parent = self.root.find('./frame[@num="{}"]/target_list/...'.format(frm_id))
+        obj_target_parent.attrib["density"] = '{}'.format(target_id)
+        print(obj_target_parent.attrib["density"])
+      
+        #print(ET.tostring(self.root, encoding='utf8').decode('utf8'))
+        self.__saveXML()
                   
     def __saveXML(self):
-        self.tree.write('output.xml')
+        self.tree.write(self.path)
     
 if __name__ == '__main__':
 
     # initiate the parser
     parser = argparse.ArgumentParser(prog='XML_2_JSON', usage='%(prog)s [options]', description='Convert a xml file to a json file.')
-    parser.add_argument("--annotation", help="path to xml file", default='./dataset/annotations/MVI_20011.xml')
+    parser.add_argument("--annotation", help="path to xml file", default='./teste.xml')
     args = parser.parse_args()
 # =============================================================================
 #     jsonObj = XML_2_JSON(args.annotation)
@@ -177,7 +189,9 @@ if __name__ == '__main__':
     jsonObj = CollectionAnnotation(args.annotation)
     #a = jsonObj.getBBoxes(1)
     a = jsonObj.getIgnoredRegion()
-    jsonObj.saveNewBBox(1)
+    jsonObj.saveNewBBox(1,1)
+    
+  
 
     #print(a[0][4]['height'])
     #print(a[0]['height'])
