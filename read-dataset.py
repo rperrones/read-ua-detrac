@@ -131,6 +131,7 @@ class detracCollectionViewer(CollectionViewer):
                 coord = (xmin, xmax, ymin, ymax)
                 self._bboxes.append([frame_id, box_id, car_type, car_color, [x1,y1,x2,y2]])
                 self.plot_rect(coord)
+            print(sorted(self._bboxes))
     
 # =============================================================================
 #     def loadIgnoredRegions(self):

@@ -14,6 +14,8 @@ import re
 from skimage.viewer.widgets import Text
 from skimage.viewer.qt import QtWidgets, QtCore
 from skimage.viewer.canvastools import RectangleTool
+from matplotlib.widgets import RectangleSelector
+import numpy as np
 
 class rectangle(RectangleTool):
     def on_key_press(self, event):
@@ -23,6 +25,23 @@ class rectangle(RectangleTool):
             self.manager.redraw()
             print('coordenadas: ', type(self._extents_on_press))
     
+    def on_mouse_press(self, event):
+        #if event.button != 1 or not self.ax.in_axes(event):
+        #    return
+        #if event.button == 0:
+        print('botao:', event.button)
+        print('is_in_axs:', self.ax.in_axes(event))
+        x, y = event.xdata, event.ydata
+        print('[{},{}]'.format(x,y))
+
+        self._set_active_handle(event)
+        if self.active_handle is None:
+            # Clear previous rectangle before drawing new rectangle.
+            print('limpouuuuu')
+            self.set_visible(False)
+            self.redraw()
+        self.set_visible(True)
+        RectangleSelector.press(self, event)
 # =============================================================================
 #     def on_move(self, event):
 #         if self.eventpress is None or not self.ax.in_axes(event):
@@ -120,55 +139,28 @@ class CollectionAnnotation:
             self.tree = ET.parse(path)
             self.root = self.tree.getroot()
 
-# =============================================================================
-#     def getBBoxes(self, i):
-#         bboxes = []
-#         for frames in self.root.iter('frame'):
-#            frame_idx = int(frames.get('num'))
-#            if (frame_idx == i):
-#                #print('frame:', frame_idx)
-#                for targets in frames.iter('target'):
-#                    id = int(targets.get('id'))
-#                    print(targets)
-#                    car_attrib = targets[1].attrib
-#                    for e in targets.iter('box'):
-#                        height_value = float(e.attrib['height'])
-#                        #print(type(int(float(height_value))))
-#                        left_value = float(e.attrib['left'])
-#                        top_value = float(e.attrib['top'])
-#                        width_value  = float(e.attrib['width'])
-#                        bboxes.append([frame_idx, id, car_attrib['vehicle_type'], car_attrib['color'], {'height': height_value, 'left': left_value, 'top': top_value, 'width': width_value}])
-# 
-#         return bboxes
-# =============================================================================
-    
     def getBBoxes(self, frm_id):
-        bboxes = []
         target_list = self.root.findall('./frame[@num="{}"]/target_list/target/...'.format(frm_id))
-        for target in target_list[0]:
+        size = len(target_list[0])
+        bbox = np.ndarray((size, 12), dtype=np.object) # lines refer to the quantity of boxes and columns to attributes
+        for i, target in enumerate(target_list[0], start=0):
             target_id = int(target.get('id'))
+            bbox[i,0] = int(frm_id)
+            bbox[i,1] = target_id
             for element in target:
-                color = ''
-                orientation = ''
-                speed = ''
-                trajectory_length = ''
-                truncation_ratio = ''
-                vehicle_type = ''
                 if element.tag == 'box':
-                    left_value  = float(element.get('left'))
-                    width_value = float(element.get('width'))
-                    top_value   = float(element.get('top'))
-                    height_value= float(element.get('height'))
+                    bbox[i,2] = float(element.get('height'))
+                    bbox[i,3] = float(element.get('left'))
+                    bbox[i,4] = float(element.get('top'))
+                    bbox[i,5] = float(element.get('width'))
                 elif element.tag == 'attribute':
-                    color = '{}'.format(element.get('color'))
-                    orientation = '{}'.format(float(element.get('orientation')))
-                    speed = '{}'.format(float(element.get('speed')))
-                    trajectory_length = '{}'.format(element.get('trajectory_length'))
-                    truncation_ratio = '{}'.format(float(element.get('truncation_ratio')))
-                    vehicle_type = '{}'.format(element.get('vehicle_type'))
-                
-                bboxes.append([frm_id, target_id, vehicle_type, color, {'height': height_value, 'left': left_value, 'top': top_value, 'width': width_value}, {'color': color, 'orientation': orientation, 'speed': speed, 'trajectory_length': trajectory_length, 'truncation_ratio': truncation_ratio, 'vehicle_type': vehicle_type}])           
-        return bboxes    
+                    bbox[i,6] = np.str(element.get('color'))
+                    bbox[i,7] = np.float(element.get('orientation'))
+                    bbox[i,8] = np.float(element.get('speed'))
+                    bbox[i,9] = np.int32(element.get('trajectory_length'))
+                    bbox[i,10] = np.float(element.get('truncation_ratio'))
+                    bbox[i,11] = np.str(element.get('vehicle_type'))
+        return bbox
     
     def getIgnoredRegion(self):
         ignoredRegions = []
@@ -211,13 +203,13 @@ class CollectionAnnotation:
         attribute.attrib["speed"] = '{}'.format("0.0")
         attribute.attrib["trajectory_length"] = '{}'.format("0.0")
         attribute.attrib["truncation_ratio"] = '{}'.format("0.0")
-        attribute.attrib["vehicle_type"] = '{}'.format("0.0")
+        attribute.attrib["vehicle_type"] = '{}'.format("Car")
         attribute.tail = "\n\t"
 
       
         obj_target_parent = self.root.find('./frame[@num="{}"]/target_list/...'.format(frm_id))
         obj_target_parent.attrib["density"] = '{}'.format(target_id)
-        print(obj_target_parent.attrib["density"])
+        print('quantidade de box atuais:', obj_target_parent.attrib["density"])
       
         #print(ET.tostring(self.root, encoding='utf8').decode('utf8'))
         self.__saveXML()
