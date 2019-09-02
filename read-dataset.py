@@ -1,14 +1,12 @@
 # include standard modules
-import xml.etree.ElementTree as ET
-from tools import CollectionAnnotation, bboxBar, rectangle
+from tools import rectangle, detracCollectionViewer
 
-from skimage.viewer import ImageViewer, CollectionViewer
-from skimage.viewer.plugins.lineprofile import LineProfile
-from skimage.viewer.widgets import Slider
+
+#from skimage.viewer.plugins.lineprofile import LineProfile
+
 from skimage.io.collection import alphanumeric_key
-from skimage.viewer.canvastools import RectangleTool
-from skimage.draw import line
-from skimage.draw import set_color
+#from skimage.viewer.canvastools import RectangleTool
+
 
 
 import numpy as np
@@ -28,8 +26,7 @@ args = parser.parse_args()
 SUFFIX_ANNOTATION = '_v3.xml'
 PATH_ANNOTATIONS = args.annotation
 PATH_DATASET = args.dataset
-YELLOW_COLOR = [255, 255, 35]
-RED_COLOR    = [255, 0, 17]
+
 
 
 # check for --version or -V
@@ -64,119 +61,8 @@ def getDirs(pathDataset):
 
 
                
-            
-class detracCollectionViewer(CollectionViewer):
-    def __init__(self, full_annotations, update_on='move'):
-        self.filename = full_annotations[0][0] # get file name
-        name, extension = self.filename.split(".")
-        self.image_collection = io.ImageCollection(PATH_DATASET + '/' + name +  '/img*.jpg')
-        self.num_images = len(self.image_collection)
-        self.index = 0
-
-        first_image = self.image_collection[0]
-        super(CollectionViewer, self).__init__(first_image)
-        self.xmlObj = CollectionAnnotation(PATH_ANNOTATIONS + '/' + self.filename)
-
-        self._plotAnnotation(self.index + 1)
-        #self.loadIgnoredRegions()
-        #self._plotIgnoredRegions()
-
-        slider_kws = dict(value=0, low=0, high=self.num_images - 1)
-        slider_kws['update_on'] = update_on
-        slider_kws['callback'] = self.update_index
-        slider_kws['value_type'] = 'int'
-        self.slider = Slider('frame', **slider_kws)
-        self.layout.addWidget(self.slider)
-
-        self.box_coord = bboxBar()
-        self.layout.addWidget(self.box_coord)
         
-
-
-    def update_index(self, name, index):
-        """Select image on display using index into image collection."""
-        if index == self.index:
-            return
-
-        # clip index value to collection limits
-        index = max(index, 0)
-        index = min(index, self.num_images -1)
-
-        self.index = index
-        self.slider.val = index
-        self.update_image(self.image_collection[index])
-        self._plotAnnotation(index + 1)
-        #self._plotIgnoredRegions()
        
-
-    
-    def _plotAnnotation(self, idx):
-        boxes = self.xmlObj.getBBoxes(idx)
-        if len(boxes) > 0:
-            self._bboxes = []
-            self.box = []
-            for b in boxes:
-                frame_id = b[0]
-                box_id = b[1]
-                car_type = b[2]
-                car_color = b[3]
-                x1 = b[4]['left']
-                y1 = b[4]['top']
-                x2 = b[4]['width']
-                y2 = b[4]['height']
-    
-                self.box = (x1, y1, x2, y2)
-                xmin, xmax = sorted([x1, x1 + x2])
-                ymin, ymax = sorted([y1, y1 + y2])
-                coord = (xmin, xmax, ymin, ymax)
-                self._bboxes.append([frame_id, box_id, car_type, car_color, [x1,y1,x2,y2]])
-                self.plot_rect(coord)
-            print(sorted(self._bboxes))
-    
-# =============================================================================
-#     def loadIgnoredRegions(self):
-#         ig = self.xmlObj.getIgnoredRegion()
-#         if len(ig) > 0:
-#             self._ignoredRegions = []
-#             self.box = []
-#             for b in ig:
-#                 x1 = b['left']
-#                 y1 = b['top']
-#                 x2 = b['width']
-#                 y2 = b['height']
-#     
-#                 self.box = (x1, y1, x2, y2)
-#                 xmin, xmax = sorted([x1, x1 + x2])
-#                 ymin, ymax = sorted([y1, y1 + y2])
-#                 coord = (xmin, xmax, ymin, ymax)
-#                 self._ignoredRegions.append([x1,y1,x2,y2])
-#                 self.plot_rect(coord)        
-#         
-#     def _plotIgnoredRegions(self):
-#         for each in self._ignoredRegions:
-#             xmin, xmax = sorted([each[0], each[0] + each[2]])
-#             ymin, ymax = sorted([each[1], each[1] + each[3]])
-#             coord = (xmin, xmax, ymin, ymax)
-#             self.plot_rect(coord, RED_COLOR)
-# =============================================================================
-    
-    def plot_rect(self, extents, color=YELLOW_COLOR, newBox=False):
-        im = self.image
-        coord = np.int64(extents)
-        
-        [rr1, cc1] = line(coord[2],coord[0],coord[2],coord[1])
-        [rr2, cc2] = line(coord[2],coord[1],coord[3],coord[1])
-        [rr3, cc3] = line(coord[3],coord[1],coord[3],coord[0])
-        [rr4, cc4] = line(coord[3],coord[0],coord[2],coord[0])
-        set_color(im, (rr1, cc1), color)
-        set_color(im, (rr2, cc2), color)
-        set_color(im, (rr3, cc3), color)
-        set_color(im, (rr4, cc4), color)
-        #viewer.image=im
-        self.update_image(im)
-        if newBox:
-            self.xmlObj.saveNewBBox(self.index + 1, coord)
-        
         
 if __name__ == '__main__':
     #app = QApplication(sys.argv)
@@ -193,9 +79,9 @@ if __name__ == '__main__':
     #viewer = ImageViewer(images)
     #viewer = CollectionViewer(images)
     #viewer = detracCollectionViewer(images)
-    viewer = detracCollectionViewer(full_annotations)
-    viewer.update_index
-    rect_tool = rectangle(viewer, on_enter=viewer.plot_rect)
+    viewer = detracCollectionViewer(full_annotations, PATH_DATASET, PATH_ANNOTATIONS)
+    #viewer.update_index
+    rect_tool = rectangle(viewer, on_enter=viewer.plot_rect, on_move=viewer.detectBBox)
 
     viewer.show()
     #print(rect_tool._extents_on_press)
