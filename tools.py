@@ -228,6 +228,7 @@ class CollectionAnnotation:
         target_list = self.root.findall('./frame[@num="{}"]/target_list/target/...'.format(frm_id))
         size = len(target_list[0])
         bbox = np.ndarray((size, 12), dtype=np.object) # lines refer to the quantity of boxes and columns to attributes
+
         for i, target in enumerate(target_list[0], start=0):
             target_id = int(target.get('id'))
             bbox[i,0] = int(frm_id)
