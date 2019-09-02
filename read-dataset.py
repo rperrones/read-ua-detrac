@@ -81,7 +81,7 @@ if __name__ == '__main__':
     #viewer = detracCollectionViewer(images)
     viewer = detracCollectionViewer(full_annotations, PATH_DATASET, PATH_ANNOTATIONS)
     #viewer.update_index
-    rect_tool = rectangle(viewer, on_enter=viewer.plot_rect, on_move=viewer.detectBBox)
+    rect_tool = rectangle(viewer, on_enter=viewer.plot_rect, on_move=viewer.detectBBox, on_key_down=viewer.removeBBox)
 
     viewer.show()
     #print(rect_tool._extents_on_press)

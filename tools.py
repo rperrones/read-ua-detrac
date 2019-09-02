@@ -19,19 +19,31 @@ from skimage.viewer import CollectionViewer
 from skimage.io import ImageCollection
 from skimage.draw import line
 from skimage.draw import set_color
-from skimage.measure import points_in_poly
 import numpy as np
 
 YELLOW_COLOR = [255, 255, 35]
 RED_COLOR    = [255, 0, 17]
 
+def _pass(*args):
+    pass
+
 class rectangle(RectangleTool):
+    def __init__(self, manager, on_move=None, on_release=None, on_enter=None,
+                 maxdist=10, rect_props=None, on_key_down=None):
+        RectangleTool.__init__(self, manager, on_enter, on_move, on_release, maxdist=10, rect_props=None)
+        self.callback_on_key_down = _pass if on_key_down is None else on_key_down
+        
     def on_key_press(self, event):
         if event.key == 'enter':
             self.callback_on_enter(self.geometry, newBox=True)
             self.set_visible(False)
             self.manager.redraw()
             print('coordenadas: ', type(self._extents_on_press))
+    
+    def on_key_down(self, event):
+        if (event.keyCode == 46): #'Delete Key Pressed'
+            self.callback_on_key_down()
+            print(event.key)
     
     def on_mouse_press(self, event):
         #if event.button != 1 or not self.ax.in_axes(event):
@@ -77,6 +89,7 @@ class detracCollectionViewer(CollectionViewer):
         self.image_collection = ImageCollection(path_dataset + '/' + name +  '/img*.jpg')
         self.num_images = len(self.image_collection)
         self.index = 0
+        self.removingBBox = []
 
         first_image = self.image_collection[0]
         super(CollectionViewer, self).__init__(first_image)
@@ -187,7 +200,13 @@ class detracCollectionViewer(CollectionViewer):
             if ((x >= v[4][0]) and (x <= v[4][2]) and (y >= v[4][1] and y <= v[4][3])):
                 print('DENTRO: {}'.format(v[4]))
                 self.plot_rect((v[4][0], v[4][2], v[4][1], v[4][3]), RED_COLOR)
+                self.removingBBox.append([v[0], v[1]])
+                print(self.removingBBox)
                 return
+            
+    def removeBBox(self):
+        for each in self.removingBBox:
+            print(each)
             
 class CollectionAnnotation:
     
