@@ -14,6 +14,7 @@ import re
 from skimage.viewer.widgets import Text, Slider
 from skimage.viewer.qt import QtWidgets, QtCore
 from skimage.viewer.canvastools import RectangleTool
+from skimage.viewer.canvastools.base import ToolHandles, CanvasToolBase
 from matplotlib.widgets import RectangleSelector
 from skimage.viewer import CollectionViewer
 from skimage.io import ImageCollection
@@ -29,10 +30,52 @@ def _pass(*args):
 
 class rectangle(RectangleTool):
     def __init__(self, manager, on_move=None, on_release=None, on_enter=None,
-                 maxdist=10, rect_props=None, on_key_down=None):
-        RectangleTool.__init__(self, manager, on_enter, on_move, on_release, maxdist=10, rect_props=None)
-        self.callback_on_key_down = _pass if on_key_down is None else on_key_down
-        
+                 maxdist=10, rect_props=None):
+        self._rect = None
+        props = dict(edgecolor=None, facecolor='r', alpha=0.15)
+        props.update(rect_props if rect_props is not None else {})
+        if props['edgecolor'] is None:
+            props['edgecolor'] = props['facecolor']
+        RectangleSelector.__init__(self, manager.ax, lambda *args: None,
+                                   rectprops=props)
+        CanvasToolBase.__init__(self, manager, on_move=on_move,
+                                on_enter=on_enter, on_release=on_release)
+
+        # Events are handled by the viewer
+        try:
+            self.disconnect_events()
+        except AttributeError:
+            # disconnect the events manually (hack for older mpl versions)
+            [self.canvas.mpl_disconnect(i) for i in range(10)]
+
+        # Alias rectangle attribute, which is initialized in RectangleSelector.
+        self._rect = self.to_draw
+        self._rect.set_animated(True)
+
+        self.maxdist = maxdist
+        self.active_handle = None
+        self._extents_on_press = None
+
+        if on_enter is None:
+            def on_enter(extents):
+                print("(xmin=%.3g, xmax=%.3g, ymin=%.3g, ymax=%.3g)" % extents)
+        self.callback_on_enter = on_enter
+
+        props = dict(mec=props['edgecolor'])
+        self._corner_order = ['NW', 'NE', 'SE', 'SW']
+        xc, yc = self.corners
+        self._corner_handles = ToolHandles(self.ax, xc, yc, marker_props=props)
+
+        self._edge_order = ['W', 'N', 'E', 'S']
+        xe, ye = self.edge_centers
+        self._edge_handles = ToolHandles(self.ax, xe, ye, marker='s',
+                                         marker_props=props)
+
+        self.artists = [self._rect,
+                        self._corner_handles.artist,
+                        self._edge_handles.artist]
+        self.manager.add_tool(self)
+       
     def on_key_press(self, event):
         if event.key == 'enter':
             self.callback_on_enter(self.geometry, newBox=True)
@@ -52,7 +95,7 @@ class rectangle(RectangleTool):
         print('botao:', event.button)
         print('is_in_axs:', self.ax.in_axes(event))
         x, y = event.xdata, event.ydata
-        print('[{},{}]'.format(x,y))
+        print('posic at click: [{},{}]'.format(x,y))
         if not self.ax.in_axes(event):
             return
         else:
@@ -201,12 +244,9 @@ class detracCollectionViewer(CollectionViewer):
                 print('DENTRO: {}'.format(v[4]))
                 self.plot_rect((v[4][0], v[4][2], v[4][1], v[4][3]), RED_COLOR)
                 self.removingBBox.append([v[0], v[1]])
-                print(self.removingBBox)
                 return
             
-    def removeBBox(self):
-        for each in self.removingBBox:
-            print(each)
+
             
 class CollectionAnnotation:
     
