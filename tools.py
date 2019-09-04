@@ -30,7 +30,7 @@ def _pass(*args):
 
 class rectangle(RectangleTool):
     def __init__(self, manager, on_move=None, on_release=None, on_enter=None,
-                 maxdist=10, rect_props=None):
+                 maxdist=10, rect_props=None, obj=None):
         self._rect = None
         props = dict(edgecolor=None, facecolor='r', alpha=0.15)
         props.update(rect_props if rect_props is not None else {})
@@ -60,6 +60,7 @@ class rectangle(RectangleTool):
             def on_enter(extents):
                 print("(xmin=%.3g, xmax=%.3g, ymin=%.3g, ymax=%.3g)" % extents)
         self.callback_on_enter = on_enter
+        self.callback_ = obj
 
         props = dict(mec=props['edgecolor'])
         self._corner_order = ['NW', 'NE', 'SE', 'SW']
@@ -82,11 +83,9 @@ class rectangle(RectangleTool):
             self.set_visible(False)
             self.manager.redraw()
             print('coordenadas: ', type(self._extents_on_press))
-    
-    def on_key_down(self, event):
-        if (event.keyCode == 46): #'Delete Key Pressed'
-            self.callback_on_key_down()
-            print(event.key)
+
+        elif event.key == 'delete': #'Delete Key Pressed'
+            self.callback_.removeBBox()
     
     def on_mouse_press(self, event):
         #if event.button != 1 or not self.ax.in_axes(event):
@@ -100,7 +99,7 @@ class rectangle(RectangleTool):
             return
         else:
             if event.button == 3:
-                 self.callback_on_move(x,y)
+                 self.callback_.detectBBox(x,y)
                  return
             if event.button == 1:
                 self._set_active_handle(event)
@@ -246,7 +245,13 @@ class detracCollectionViewer(CollectionViewer):
                 self.removingBBox.append([v[0], v[1]])
                 return
             
-
+    def removeBBox(self):
+        if len(self.removingBBox) > 0:
+            for bbox in self.removingBBox:
+                self.xmlObj.removeBBox(bbox[0], bbox[1])
+                print('frame {} box {}'.format(bbox[0], bbox[1]))
+        else:
+            print('There is not any bbox to be removed.')
             
 class CollectionAnnotation:
     
@@ -358,6 +363,15 @@ class CollectionAnnotation:
       
         #print(ET.tostring(self.root, encoding='utf8').decode('utf8'))
         self.__saveXML()
+        
+    def removeBBox(self, frame_id, box_id):
+        obj_target = self.root.find('./frame[@num="{}"]/target_list/target[@id="{}"]...'.format(frame_id, box_id))
+        for i, obj in enumerate(obj_target, start=1):
+            print(obj.attrib["id"])
+            if obj.attrib["id"] == box_id:
+                self.obj_target.remove(obj)
+                print('removend: bbox {}'.format(box_id))
+        self.tree.write(self.path)
                   
     def __saveXML(self):
         self.tree.write(self.path)
