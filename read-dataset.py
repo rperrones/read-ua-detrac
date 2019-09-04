@@ -10,8 +10,10 @@ from skimage.io.collection import alphanumeric_key
 
 
 
+
 import argparse
 import os
+import sys
 
 
 # initiate the parser
@@ -64,9 +66,7 @@ def getDirs(pathDataset):
        
         
 if __name__ == '__main__':
-    #app = QApplication(sys.argv)
-    #ex = Example()
-    
+   
     total_annotation, total_images = getDirs(PATH_DATASET)
     print('Total of video annotations: {}'.format(total_annotation))
     print('Total of images in dataset: {}'.format(total_images))
@@ -83,6 +83,7 @@ if __name__ == '__main__':
     rect_tool = rectangle(viewer, on_enter=viewer.plot_rect, obj=viewer)
 
     viewer.show()
+
     #print(rect_tool._extents_on_press)
     #viewer += LineProfile(viewer)
     #overlay, data = viewer.show()[0]
@@ -94,3 +95,4 @@ if __name__ == '__main__':
     #print(bboxes)
     
 
+    sys.exit(viewer)
