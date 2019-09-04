@@ -9,8 +9,7 @@ from skimage.io.collection import alphanumeric_key
 
 
 
-import numpy as np
-import skimage.io as io
+
 import argparse
 import os
 

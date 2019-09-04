@@ -131,7 +131,7 @@ class detracCollectionViewer(CollectionViewer):
         self.image_collection = ImageCollection(path_dataset + '/' + name +  '/img*.jpg')
         self.num_images = len(self.image_collection)
         self.index = 0
-        self.removingBBox = []
+        self.garbageBBox = []
 
         first_image = self.image_collection[0]
         super(CollectionViewer, self).__init__(first_image)
@@ -242,14 +242,15 @@ class detracCollectionViewer(CollectionViewer):
             if ((x >= v[4][0]) and (x <= v[4][2]) and (y >= v[4][1] and y <= v[4][3])):
                 print('DENTRO: {}'.format(v[4]))
                 self.plot_rect((v[4][0], v[4][2], v[4][1], v[4][3]), RED_COLOR)
-                self.removingBBox.append([v[0], v[1]])
+                self.garbageBBox.append([v[1]])
                 return
             
     def removeBBox(self):
-        if len(self.removingBBox) > 0:
-            for bbox in self.removingBBox:
-                self.xmlObj.removeBBox(bbox[0], bbox[1])
-                print('frame {} box {}'.format(bbox[0], bbox[1]))
+        if len(self.garbageBBox) > 0:
+            self.xmlObj.removeBBox(self.index + 1, self.garbageBBox)
+            self.garbageBBox.clear()
+            self._bboxes.clear()
+            self._plotAnnotation(self.index + 1)
         else:
             print('There is not any bbox to be removed.')
             
@@ -364,17 +365,22 @@ class CollectionAnnotation:
         #print(ET.tostring(self.root, encoding='utf8').decode('utf8'))
         self.__saveXML()
         
-    def removeBBox(self, frame_id, box_id):
-        obj_target = self.root.find('./frame[@num="{}"]/target_list/target[@id="{}"]...'.format(frame_id, box_id))
-        for i, obj in enumerate(obj_target, start=1):
-            print(obj.attrib["id"])
-            if obj.attrib["id"] == box_id:
-                self.obj_target.remove(obj)
-                print('removend: bbox {}'.format(box_id))
-        self.tree.write(self.path)
+    def removeBBox(self, frame_id, collectionBBox):
+        obj_target = self.root.find('./frame[@num="{}"]/target_list/target/...'.format(frame_id))
+        obj_target_size = len(obj_target)
+        for i, bbox in enumerate(collectionBBox, start=1):
+            box_id = bbox[0]
+            obj = obj_target.find('./target[@id="{}"]'.format(box_id))
+            obj_target.remove(obj)
+        collectionBBox.clear()
+        obj_target_parent = self.root.find('./frame[@num="{}"]/target_list/...'.format(frame_id))
+        obj_target_parent.attrib["density"] = '{}'.format(obj_target_size - i)
+        self.__saveXML()
+        
                   
     def __saveXML(self):
         self.tree.write(self.path)
+        self._loadAsXML(self.path)
     
 if __name__ == '__main__':
 
