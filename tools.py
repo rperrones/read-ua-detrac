@@ -236,6 +236,7 @@ class detracCollectionViewer(CollectionViewer):
         self.update_image(im)
         if newBox:
             self.xmlObj.saveNewBBox(self.index + 1, coord)
+            self._bboxes.append([self.index + 1, self.xmlObj.boxQuantity + 1, "None", "None", [extents[0], extents[2], extents[1], extents[3]]]) 
 
     def detectBBox(self, x,y):
         for v in self._bboxes:
@@ -320,6 +321,7 @@ class CollectionAnnotation:
                     bbox[i,9] = np.int32(element.get('trajectory_length'))
                     bbox[i,10] = np.float(element.get('truncation_ratio'))
                     bbox[i,11] = np.str(element.get('vehicle_type'))
+        self.boxQuantity = size
         return bbox
     
     def getIgnoredRegion(self):
