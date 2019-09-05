@@ -125,3 +125,5 @@ dmypy.json
 
 # Data set images
 dataset/
+
+.h5
