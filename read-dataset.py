@@ -1,15 +1,10 @@
 # include standard modules
 from tools import rectangle, detracCollectionViewer
 
-
 #from skimage.viewer.plugins.lineprofile import LineProfile
 
 from skimage.io.collection import alphanumeric_key
 #from skimage.viewer.canvastools import RectangleTool
-
-
-
-
 
 import argparse
 import os
@@ -18,8 +13,8 @@ import sys
 
 # initiate the parser
 parser = argparse.ArgumentParser(prog='read-au-detrac', usage='%(prog)s [options]', description='Shows each annotated image at au-detrac data set.')
-parser.add_argument("--dataset", help="dataset directory", default='./dataset/images')
-parser.add_argument("--annotation", help="annotation directory", default='./dataset/annotations')
+parser.add_argument("--dataset", help="dataset directory", default='./datasets/images')
+parser.add_argument("--annotation", help="annotation directory", default='./datasets/annotations')
 parser.add_argument('--version', action='version', version='%(prog)s 0.1')
 
 # read arguments from the command line
